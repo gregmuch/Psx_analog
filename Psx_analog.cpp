@@ -1,10 +1,8 @@
 /*  Analog PSX Controller Decoder Library (Psx_analog.cpp)
 	Written by: Kieran Levin Mar 8th, 2009
 	Based upon the work by Kevin Ahrendt June 22nd, 2008
-
 	Analog protocal implemented with information from 
 	http://www.curiousinventor.com/guides/ps2
-
 		Fixed reverse shifting in (MSB->LSB) now reads analog values....
 	Controller protocol implemented using Andrew J McCubbin's analysis.
 	http://www.gamesx.com/controldata/psxcont/psxcont.htm
@@ -18,32 +16,24 @@
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------
     Standard Digital Pad
-
     BYTE    CMND    DATA
-
      01     0x01    idle
      02     0x42    0x41
      03     idle    0x5A    Bit0 Bit1 Bit2 Bit3 Bit4 Bit5 Bit6 Bit7
      04     idle    data    SLCT           STRT UP   RGHT DOWN LEFT
      05     idle    data    L2   R2    L1  R1   /\   O    X    |_|
-
     All Buttons active low.
-
 --------------------------------------------------------------------------------
     Analogue Controller in Red Mode
-
     BYTE    CMND    DATA
-
      01     0x01    idle
      02     0x42    0x73
      03     idle    0x5A    Bit0 Bit1 Bit2 Bit3 Bit4 Bit5 Bit6 Bit7
@@ -56,17 +46,34 @@
 --------------------------------------------------------------------------------
 */
 #include "Psx_analog.h"
-// #include "Spi.h"
-#include <SPI.h>
-
+#include "Spi.h"
 Psx::Psx()
 {
 }
 #define CLKDELAY 20
 
 #define WAIT 100
-byte Psx::shift(byte _dataOut) { return SPI.transfer(_dataOut);}
-
+byte Psx::shift(byte _dataOut) { return Spi.transfer(_dataOut,WAIT);}
+/*
+byte Psx::shift(byte _dataOut)	// Does the actual shifting, both in and out simultaneously
+{
+	_temp = 0;
+	_dataIn = 0;
+	for (_i = 0; _i <= 7; _i++)
+	{
+		digitalWrite(_clockPin, LOW);
+		if ( _dataOut & (1 << _i) ) digitalWrite(_cmndPin, HIGH);	// Writes out the _dataOut bits
+		else digitalWrite(_cmndPin, LOW);
+		_temp = digitalRead(_dataPin);					// Reads the data pin
+		if (_temp)
+		{
+			_dataIn = _dataIn | (B00000001 << _i);		// Shifts the read data into _dataIn
+		}
+		digitalWrite(_clockPin, HIGH);
+	}
+	return _dataIn;
+}
+*/
 
 void Psx::setupPins(byte dataPin, byte cmndPin, byte attPin, byte clockPin)
 {
@@ -89,8 +96,8 @@ void Psx::setupPins(byte dataPin, byte cmndPin, byte attPin, byte clockPin)
 	Motorsmall = 0x00;
 	Motorlarge = 0x00;
 	//setup SPI 
-//  	SPI.mode((1<<SPR1) | (1<<SPR0) | (1<<DORD) | (1<<CPOL) | (1<<CPHA)); 
-//  	SPSR = SPSR | (0<<SPI2X);
+  	Spi.mode((1<<SPR1) | (1<<SPR0) | (1<<DORD) | (1<<CPOL) | (1<<CPHA)); 
+  	SPSR = SPSR | (0<<SPI2X);
 
 }
 
@@ -193,5 +200,3 @@ byte Psx::initcontroller(byte controller_mode)
 	poll();
 	return Controller_mode; 	
 }
-
-
